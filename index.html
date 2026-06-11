@@ -434,6 +434,115 @@
       font-size: 0.85rem;
       padding: 0.35rem 0.5rem;
     }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transform: translateY(12px) scale(0.98);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      margin-bottom: 1rem;
+    }
+
+    .modal-header h2 {
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-header p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+
+    .signup-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .form-field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-field input {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid #2d3a4f;
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .form-field input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .form-field input.invalid {
+      border-color: var(--red);
+    }
+
+    .form-error {
+      color: var(--red);
+      font-size: 0.78rem;
+      min-height: 1rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+    }
+
+    .signup-success {
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .signup-success p {
+      color: var(--green);
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -511,6 +620,40 @@
     </section>
 
     <footer>행운을 빕니다. 책임감 있게 즐기세요.</footer>
+  </div>
+
+  <div class="modal-overlay" id="signupModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="signupModalTitle">
+      <div class="modal-header">
+        <h2 id="signupModalTitle">AI 로또 번호 추천 서비스</h2>
+        <p>앞으로 AI가 생년월일과 운세를 분석해 맞춤 로또 번호를 추천해 드립니다. 서비스 소식을 받으려면 가입해 주세요.</p>
+      </div>
+
+      <form class="signup-form" id="signupForm">
+        <div class="form-field">
+          <label for="signupName">이름</label>
+          <input type="text" id="signupName" placeholder="홍길동" maxlength="20" required>
+        </div>
+        <div class="form-field">
+          <label for="signupPhone">전화번호</label>
+          <input type="tel" id="signupPhone" placeholder="010-1234-5678" maxlength="13" required>
+        </div>
+        <div class="form-field">
+          <label for="signupEmail">이메일</label>
+          <input type="email" id="signupEmail" placeholder="example@email.com" maxlength="60" required>
+        </div>
+        <p class="form-error" id="signupError"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="signupLaterBtn">나중에</button>
+          <button type="submit" class="btn btn-primary" id="signupSubmitBtn">가입하기</button>
+        </div>
+      </form>
+
+      <div class="signup-success" id="signupSuccess" hidden>
+        <p>가입 신청이 완료되었습니다!<br>AI 맞춤 번호 추천 소식을 기대해 주세요.</p>
+        <button type="button" class="btn btn-primary" id="signupCloseBtn">확인</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -629,6 +772,7 @@
       }
 
       drawBtn.disabled = false;
+      showSignupModal();
     }
 
     drawBtn.addEventListener("click", runDraw);
@@ -815,6 +959,7 @@
         resultLabel.textContent = "챗봇 추천 번호";
         history = [data.numbers, ...history].slice(0, 50);
         renderHistory();
+        showSignupModal();
       } catch (error) {
         showTyping(false);
         appendChatMessage("bot", escapeHtml(error.message));
@@ -849,6 +994,126 @@
 
     const todayStr = new Date().toISOString().slice(0, 10);
     birthDateInput.max = todayStr;
+
+    const SIGNUP_DONE_KEY = "lottoSignupDone";
+    const signupModal = document.getElementById("signupModal");
+    const signupForm = document.getElementById("signupForm");
+    const signupSuccess = document.getElementById("signupSuccess");
+    const signupError = document.getElementById("signupError");
+    const signupName = document.getElementById("signupName");
+    const signupPhone = document.getElementById("signupPhone");
+    const signupEmail = document.getElementById("signupEmail");
+    const signupLaterBtn = document.getElementById("signupLaterBtn");
+    const signupCloseBtn = document.getElementById("signupCloseBtn");
+    const signupSubmitBtn = document.getElementById("signupSubmitBtn");
+
+    function isSignupCompleted() {
+      return localStorage.getItem(SIGNUP_DONE_KEY) === "true";
+    }
+
+    function showSignupModal() {
+      if (isSignupCompleted()) return;
+
+      signupForm.hidden = false;
+      signupSuccess.hidden = true;
+      signupError.textContent = "";
+      signupForm.reset();
+      signupModal.classList.add("open");
+      signupModal.setAttribute("aria-hidden", "false");
+      signupName.focus();
+    }
+
+    function hideSignupModal() {
+      signupModal.classList.remove("open");
+      signupModal.setAttribute("aria-hidden", "true");
+    }
+
+    function formatPhone(value) {
+      const digits = value.replace(/\D/g, "").slice(0, 11);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    }
+
+    function validateSignupForm() {
+      const name = signupName.value.trim();
+      const phone = signupPhone.value.trim();
+      const email = signupEmail.value.trim();
+      let valid = true;
+
+      signupName.classList.remove("invalid");
+      signupPhone.classList.remove("invalid");
+      signupEmail.classList.remove("invalid");
+      signupError.textContent = "";
+
+      if (name.length < 2) {
+        signupError.textContent = "이름을 2자 이상 입력해 주세요.";
+        signupName.classList.add("invalid");
+        valid = false;
+      }
+
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (!/^01[016789]\d{7,8}$/.test(phoneDigits)) {
+        signupError.textContent = signupError.textContent || "올바른 전화번호를 입력해 주세요.";
+        signupPhone.classList.add("invalid");
+        valid = false;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        signupError.textContent = signupError.textContent || "올바른 이메일을 입력해 주세요.";
+        signupEmail.classList.add("invalid");
+        valid = false;
+      }
+
+      return valid ? { name, phone: formatPhone(phoneDigits), email } : null;
+    }
+
+    signupPhone.addEventListener("input", () => {
+      signupPhone.value = formatPhone(signupPhone.value);
+    });
+
+    signupLaterBtn.addEventListener("click", hideSignupModal);
+
+    signupCloseBtn.addEventListener("click", () => {
+      localStorage.setItem(SIGNUP_DONE_KEY, "true");
+      hideSignupModal();
+    });
+
+    signupForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = validateSignupForm();
+      if (!data) return;
+
+      signupSubmitBtn.disabled = true;
+      signupSubmitBtn.textContent = "처리 중...";
+
+      try {
+        const response = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "가입 신청에 실패했습니다.");
+        }
+
+        localStorage.setItem(SIGNUP_DONE_KEY, "true");
+        signupForm.hidden = true;
+        signupSuccess.hidden = false;
+      } catch (error) {
+        signupError.textContent = error.message;
+      } finally {
+        signupSubmitBtn.disabled = false;
+        signupSubmitBtn.textContent = "가입하기";
+      }
+    });
+
+    signupModal.addEventListener("click", (event) => {
+      if (event.target === signupModal) hideSignupModal();
+    });
   </script>
 </body>
 </html>

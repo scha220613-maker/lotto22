@@ -10,6 +10,15 @@
 - 번호 구간별 색상 표시
 - 추첨 기록 저장 및 복사
 - 생년월일 입력 + Gemini 운세 챗봇 번호 추천
+- 가입 팝업 (이름, 전화번호, 이메일 → Supabase 저장)
+
+## Supabase 설정
+
+1. [Supabase](https://supabase.com)에서 프로젝트를 생성합니다.
+2. **SQL Editor**에서 `supabase/schema.sql` 내용을 실행해 `signups` 테이블을 만듭니다.
+3. **Project Settings → API**에서 아래 값을 확인합니다.
+   - Project URL → `SUPABASE_URL`
+   - `service_role` secret → `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Vercel 배포
 
@@ -19,8 +28,12 @@
 | 이름 | 값 |
 |------|-----|
 | `GEMINI_API_KEY` | Google AI Studio에서 발급한 API 키 |
+| `SUPABASE_URL` | Supabase Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role secret |
 
 3. Deploy 후 사이트에서 생년월일을 저장하고 **운세 번호 추천**을 사용합니다.
+
+> `SUPABASE_SERVICE_ROLE_KEY`는 서버에서만 사용하세요. 클라이언트 코드에 넣지 마세요.
 
 > 챗봇 API(`/api/chat`)는 Vercel 서버리스 함수로 동작합니다. 로컬에서 `index.html`만 열면 챗봇은 작동하지 않습니다.
 
@@ -35,6 +48,8 @@ Vercel CLI 실행 시 `GEMINI_API_KEY` 환경변수를 설정하거나 `.env.loc
 
 ```
 GEMINI_API_KEY=your_api_key_here
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 ```
 
 ## AI 모델
