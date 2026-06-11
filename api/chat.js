@@ -24,10 +24,10 @@ function buildPrompt(birthDate, numbers, today, userMessage) {
 
 사용자 메시지: ${userMessage}
 
-다음 JSON 형식으로만 답변하세요:
+반드시 아래 JSON 형식으로만 답변하세요. 다른 텍스트는 포함하지 마세요.
 {
   "fortune": "오늘의 운세를 1~2문장으로 요약",
-  "explanation": "생년월일과 오늘 운세를 바탕으로 위 번호 각각 또는 전체를 추천하는 이유를 3~5문장으로 설명",
+  "explanation": "생년월일과 오늘 운세를 바탕으로 위 번호를 추천하는 이유를 3~5문장으로 설명",
   "reply": "사용자에게 전달할 친근한 대화형 답변(번호 목록 포함)"
 }
 
@@ -35,7 +35,78 @@ function buildPrompt(birthDate, numbers, today, userMessage) {
 - 반드시 한국어
 - 사주, 별자리, 오늘의 기운 등을 활용해 창의적으로 연결
 - 재미·참고용이며 당첨을 보장하지 않음을 자연스럽게 언급
-- numbers 배열 값은 절대 바꾸지 마세요`;
+- 번호는 ${numbers.join(", ")}만 사용하고 변경하지 마세요`;
+}
+
+function getApiKey() {
+  return (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "").trim();
+}
+
+function parseGeminiError(status, errText) {
+  try {
+    const err = JSON.parse(errText);
+    const message = err.error?.message || "";
+    const code = err.error?.code || status;
+
+    if (code === 429 || message.includes("quota") || message.includes("Quota exceeded")) {
+      return "AI 사용 한도를 초과했습니다. 1~2분 후 다시 시도하거나 Google AI Studio에서 사용량을 확인해 주세요.";
+    }
+
+    if (
+      message.includes("API key not valid") ||
+      message.includes("API_KEY_INVALID") ||
+      code === 401 ||
+      code === 403
+    ) {
+      return "API 키가 올바르지 않습니다. Vercel 환경변수 GEMINI_API_KEY 값을 확인해 주세요.";
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  return "AI 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+function extractJsonObject(text) {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{")) {
+    return JSON.parse(trimmed);
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("JSON not found");
+  }
+
+  return JSON.parse(trimmed.slice(start, end + 1));
+}
+
+async function callGemini(apiKey, contents, useSchema) {
+  const generationConfig = useSchema
+    ? {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            fortune: { type: "string" },
+            explanation: { type: "string" },
+            reply: { type: "string" },
+          },
+          required: ["fortune", "explanation", "reply"],
+        },
+      }
+    : {
+        responseMimeType: "application/json",
+      };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents, generationConfig }),
+  });
 }
 
 module.exports = async function handler(req, res) {
@@ -51,7 +122,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
     return res.status(500).json({ error: "GEMINI_API_KEY 환경변수가 설정되지 않았습니다." });
   }
@@ -90,36 +161,23 @@ module.exports = async function handler(req, res) {
   });
 
   try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "object",
-              properties: {
-                fortune: { type: "string" },
-                explanation: { type: "string" },
-                reply: { type: "string" },
-              },
-              required: ["fortune", "explanation", "reply"],
-            },
-          },
-        }),
-      }
-    );
+    let response = await callGemini(apiKey, contents, true);
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("Gemini API error:", errText);
-      return res.status(502).json({ error: "AI 응답을 가져오지 못했습니다." });
+      console.error("Gemini API error (structured):", response.status, errText);
+
+      if (response.status === 400) {
+        response = await callGemini(apiKey, contents, false);
+      } else {
+        return res.status(502).json({ error: parseGeminiError(response.status, errText) });
+      }
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Gemini API error (fallback):", response.status, errText);
+      return res.status(502).json({ error: parseGeminiError(response.status, errText) });
     }
 
     const data = await response.json();
@@ -129,7 +187,11 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ error: "AI 응답이 비어 있습니다." });
     }
 
-    const parsed = JSON.parse(rawText);
+    const parsed = extractJsonObject(rawText);
+
+    if (!parsed.fortune || !parsed.explanation || !parsed.reply) {
+      return res.status(502).json({ error: "AI 응답 형식이 올바르지 않습니다." });
+    }
 
     return res.status(200).json({
       numbers,
