@@ -10,8 +10,12 @@ create table if not exists public.signups (
 
 create index if not exists signups_created_at_idx on public.signups (created_at desc);
 
-alter table public.signups enable row level security;
+-- Vercel 서버(service_role)에서만 저장합니다.
+alter table public.signups disable row level security;
 
--- 서버(Vercel)는 service_role 키로 저장하므로 별도 insert 정책은 필요 없습니다.
--- anon 키로 직접 접근하는 insert는 차단합니다.
-revoke all on public.signups from anon, authenticated;
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.signups to service_role;
+
+-- 이미 테이블을 만든 경우 권한만 다시 적용하려면 아래도 실행하세요.
+-- alter table public.signups disable row level security;
+-- grant select, insert, update, delete on public.signups to service_role;

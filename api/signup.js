@@ -26,14 +26,51 @@ function validateSignup(body) {
 }
 
 function getSupabaseConfig() {
-  const url = (process.env.SUPABASE_URL || "").trim();
-  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  const url = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const serviceRoleKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    ""
+  ).trim();
 
   if (!url || !serviceRoleKey) {
     return null;
   }
 
   return { url, serviceRoleKey };
+}
+
+function parseSupabaseError(status, errText) {
+  try {
+    const err = JSON.parse(errText);
+    const code = err.code || "";
+    const message = err.message || "";
+
+    if (status === 401 || message.toLowerCase().includes("invalid api key")) {
+      return "Supabase API 키가 올바르지 않습니다. Vercel에 SUPABASE_SERVICE_ROLE_KEY(service_role secret)를 설정해 주세요.";
+    }
+
+    if (
+      code === "PGRST205" ||
+      code === "42P01" ||
+      message.includes("Could not find the table") ||
+      message.includes("relation \"public.signups\" does not exist")
+    ) {
+      return "signups 테이블이 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 실행해 주세요.";
+    }
+
+    if (
+      status === 403 ||
+      code === "42501" ||
+      message.toLowerCase().includes("permission denied")
+    ) {
+      return "Supabase 저장 권한이 없습니다. schema.sql을 다시 실행해 주세요.";
+    }
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  return "가입 정보 저장에 실패했습니다. Supabase 설정을 확인한 뒤 다시 시도해 주세요.";
 }
 
 async function saveToSupabase(signup) {
@@ -65,7 +102,9 @@ async function saveToSupabase(signup) {
       throw new Error("DUPLICATE_EMAIL");
     }
 
-    throw new Error("SUPABASE_INSERT_FAILED");
+    const error = new Error("SUPABASE_INSERT_FAILED");
+    error.userMessage = parseSupabaseError(response.status, errText);
+    throw error;
   }
 }
 
@@ -89,7 +128,8 @@ module.exports = async function handler(req, res) {
 
   if (!getSupabaseConfig()) {
     return res.status(500).json({
-      error: "Supabase 환경변수가 설정되지 않았습니다. SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY를 확인해 주세요.",
+      error:
+        "Supabase 환경변수가 설정되지 않았습니다. SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY를 확인해 주세요.",
     });
   }
 
@@ -105,6 +145,8 @@ module.exports = async function handler(req, res) {
       return res.status(409).json({ error: "이미 가입된 이메일입니다." });
     }
 
-    return res.status(500).json({ error: "가입 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요." });
+    return res.status(500).json({
+      error: error.userMessage || "가입 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+    });
   }
 };

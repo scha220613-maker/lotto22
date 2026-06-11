@@ -28,12 +28,12 @@
 | 이름 | 값 |
 |------|-----|
 | `GEMINI_API_KEY` | Google AI Studio에서 발급한 API 키 |
-| `SUPABASE_URL` | Supabase Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role secret |
+| `SUPABASE_URL` | Supabase Project URL (예: `https://xxxx.supabase.co`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase **service_role** secret (anon key 아님) |
 
 3. Deploy 후 사이트에서 생년월일을 저장하고 **운세 번호 추천**을 사용합니다.
 
-> `SUPABASE_SERVICE_ROLE_KEY`는 서버에서만 사용하세요. 클라이언트 코드에 넣지 마세요.
+> `SUPABASE_SERVICE_ROLE_KEY`는 **Project Settings → API → service_role secret** 값입니다. `anon public` 키를 넣으면 저장이 실패합니다.
 
 > 챗봇 API(`/api/chat`)는 Vercel 서버리스 함수로 동작합니다. 로컬에서 `index.html`만 열면 챗봇은 작동하지 않습니다.
 
