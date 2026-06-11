@@ -28,7 +28,7 @@
 | 이름 | 값 |
 |------|-----|
 | `GEMINI_API_KEY` | Google AI Studio에서 발급한 API 키 |
-| `SUPABASE_URL` | Supabase Project URL (예: `https://xxxx.supabase.co`) |
+| `SUPABASE_URL` | Supabase Project URL만 입력 (예: `https://xxxx.supabase.co`, `/rest/v1` 붙이지 않음) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase **service_role** secret (anon key 아님) |
 
 3. Deploy 후 사이트에서 생년월일을 저장하고 **운세 번호 추천**을 사용합니다.

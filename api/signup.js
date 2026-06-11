@@ -25,19 +25,44 @@ function validateSignup(body) {
   };
 }
 
+function normalizeSupabaseUrl(raw) {
+  let url = (raw || "").trim().replace(/^["']|["']$/g, "");
+  if (!url) return null;
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+
+  url = url.replace(/\/+$/, "");
+  url = url.replace(/\/rest\/v1\/?$/i, "");
+
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+
 function getSupabaseConfig() {
-  const url = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const url = normalizeSupabaseUrl(process.env.SUPABASE_URL);
   const serviceRoleKey = (
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
     ""
-  ).trim();
+  )
+    .trim()
+    .replace(/^["']|["']$/g, "");
 
   if (!url || !serviceRoleKey) {
     return null;
   }
 
   return { url, serviceRoleKey };
+}
+
+function getSignupsEndpoint(baseUrl) {
+  return `${baseUrl}/rest/v1/signups`;
 }
 
 function parseSupabaseError(status, errText) {
@@ -48,6 +73,10 @@ function parseSupabaseError(status, errText) {
 
     if (status === 401 || message.toLowerCase().includes("invalid api key")) {
       return "Supabase API 키가 올바르지 않습니다. Vercel에 SUPABASE_SERVICE_ROLE_KEY(service_role secret)를 설정해 주세요.";
+    }
+
+    if (code === "PGRST125") {
+      return "SUPABASE_URL 형식이 올바르지 않습니다. Vercel에 `https://프로젝트ID.supabase.co` 만 입력하세요. (/rest/v1, 대시보드 URL 붙이지 마세요)";
     }
 
     if (
@@ -83,7 +112,7 @@ async function saveToSupabase(signup) {
     throw new Error("SUPABASE_NOT_CONFIGURED");
   }
 
-  const response = await fetch(`${config.url}/rest/v1/signups`, {
+  const response = await fetch(getSignupsEndpoint(config.url), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -130,10 +159,11 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: result.error });
   }
 
-  if (!getSupabaseConfig()) {
+  const supabaseConfig = getSupabaseConfig();
+  if (!supabaseConfig) {
     return res.status(500).json({
       error:
-        "Supabase 환경변수가 설정되지 않았습니다. SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY를 확인해 주세요.",
+        "Supabase 환경변수가 설정되지 않았습니다. SUPABASE_URL(https://프로젝트ID.supabase.co), SUPABASE_SERVICE_ROLE_KEY를 확인해 주세요.",
     });
   }
 
