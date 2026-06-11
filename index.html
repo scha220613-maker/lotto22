@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로또 번호 추첨기</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface-hover: #243044;
+      --text: #e8edf4;
+      --text-muted: #8b9cb3;
+      --accent: #38bdf8;
+      --accent-dim: #0ea5e9;
+      --ball-bg: #fff;
+      --ball-text: #1a1a2e;
+      --yellow: #f5c518;
+      --blue: #4a90d9;
+      --red: #e74c3c;
+      --gray: #95a5a6;
+      --green: #2ecc71;
+      --radius: 16px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .control-group label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid #2d3a4f;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dim);
+    }
+
+    .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #2d3d55;
+    }
+
+    .balls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      justify-content: center;
+      min-height: 56px;
+      align-items: center;
+    }
+
+    .ball {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--ball-text);
+      background: var(--ball-bg);
+      box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.25);
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .ball.yellow { background: var(--yellow); }
+    .ball.blue { background: var(--blue); color: #fff; }
+    .ball.red { background: var(--red); color: #fff; }
+    .ball.gray { background: var(--gray); color: #fff; }
+    .ball.green { background: var(--green); color: #fff; }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.3) translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .ball.spinning {
+      animation: spin 0.6s linear infinite;
+      background: var(--surface-hover) !important;
+      color: var(--text-muted);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .result-label {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .history-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      background: var(--bg);
+      border-radius: 10px;
+    }
+
+    .history-index {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 1.5rem;
+    }
+
+    .history-balls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .history-balls .ball {
+      width: 32px;
+      height: 32px;
+      font-size: 0.8rem;
+      animation: none;
+    }
+
+    .empty-history {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      padding: 1.5rem 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.25rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>로또 번호 추첨기</h1>
+      <p>1~45 중 중복 없이 6개 번호를 무작위로 추첨합니다</p>
+    </header>
+
+    <section class="card">
+      <div class="controls">
+        <div class="control-group">
+          <label for="count">추첨 세트</label>
+          <select id="count">
+            <option value="1">1세트</option>
+            <option value="3">3세트</option>
+            <option value="5" selected>5세트</option>
+            <option value="10">10세트</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="drawBtn">번호 추첨</button>
+        <button class="btn btn-secondary" id="copyBtn" title="최근 결과 복사">복사</button>
+      </div>
+
+      <p class="result-label" id="resultLabel">아래 버튼을 눌러 번호를 추첨하세요</p>
+      <div class="balls" id="mainBalls"></div>
+
+      <div class="legend">
+        <span><span class="legend-dot" style="background:var(--yellow)"></span> 1~10</span>
+        <span><span class="legend-dot" style="background:var(--blue)"></span> 11~20</span>
+        <span><span class="legend-dot" style="background:var(--red)"></span> 21~30</span>
+        <span><span class="legend-dot" style="background:var(--gray)"></span> 31~40</span>
+        <span><span class="legend-dot" style="background:var(--green)"></span> 41~45</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="history-header">
+        <h2>추첨 기록</h2>
+        <button class="btn btn-secondary" id="clearBtn" style="padding:0.4rem 0.75rem;font-size:0.8rem;">기록 삭제</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <p class="empty-history">아직 추첨 기록이 없습니다</p>
+      </div>
+    </section>
+
+    <footer>행운을 빕니다. 책임감 있게 즐기세요.</footer>
+  </div>
+
+  <script>
+    const MIN = 1;
+    const MAX = 45;
+    const PICK = 6;
+
+    function getBallColor(n) {
+      if (n <= 10) return "yellow";
+      if (n <= 20) return "blue";
+      if (n <= 30) return "red";
+      if (n <= 40) return "gray";
+      return "green";
+    }
+
+    function drawNumbers() {
+      const pool = Array.from({ length: MAX }, (_, i) => i + 1);
+      const result = [];
+      for (let i = 0; i < PICK; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        result.push(pool.splice(idx, 1)[0]);
+      }
+      return result.sort((a, b) => a - b);
+    }
+
+    function createBall(num, delay = 0) {
+      const el = document.createElement("div");
+      el.className = `ball ${getBallColor(num)}`;
+      el.textContent = num;
+      el.style.animationDelay = `${delay}ms`;
+      return el;
+    }
+
+    function renderBalls(container, numbers, animate = true) {
+      container.innerHTML = "";
+      numbers.forEach((n, i) => {
+        const ball = createBall(n, animate ? i * 80 : 0);
+        container.appendChild(ball);
+      });
+    }
+
+    function showSpinning(container) {
+      container.innerHTML = "";
+      for (let i = 0; i < PICK; i++) {
+        const el = document.createElement("div");
+        el.className = "ball spinning";
+        el.textContent = "?";
+        el.style.animationDelay = `${i * 60}ms`;
+        container.appendChild(el);
+      }
+    }
+
+    let history = [];
+    let lastResult = [];
+
+    const mainBalls = document.getElementById("mainBalls");
+    const resultLabel = document.getElementById("resultLabel");
+    const historyList = document.getElementById("historyList");
+    const drawBtn = document.getElementById("drawBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const countSelect = document.getElementById("count");
+
+    function renderHistory() {
+      if (history.length === 0) {
+        historyList.innerHTML = '<p class="empty-history">아직 추첨 기록이 없습니다</p>';
+        return;
+      }
+
+      historyList.innerHTML = "";
+      history.forEach((nums, idx) => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+
+        const indexEl = document.createElement("span");
+        indexEl.className = "history-index";
+        indexEl.textContent = `${history.length - idx}`;
+
+        const ballsEl = document.createElement("div");
+        ballsEl.className = "history-balls";
+        nums.forEach((n) => ballsEl.appendChild(createBall(n)));
+
+        item.appendChild(indexEl);
+        item.appendChild(ballsEl);
+        historyList.appendChild(item);
+      });
+    }
+
+    async function runDraw() {
+      const sets = parseInt(countSelect.value, 10);
+      drawBtn.disabled = true;
+
+      const newSets = [];
+      for (let s = 0; s < sets; s++) {
+        showSpinning(mainBalls);
+        resultLabel.textContent = sets > 1
+          ? `${s + 1}번째 세트 추첨 중...`
+          : "번호 추첨 중...";
+
+        await new Promise((r) => setTimeout(r, 500 + s * 200));
+        const nums = drawNumbers();
+        newSets.push(nums);
+        renderBalls(mainBalls, nums);
+        resultLabel.textContent = sets > 1
+          ? `${s + 1}/${sets} 세트 완료`
+          : "추첨 완료!";
+        await new Promise((r) => setTimeout(r, sets > 1 ? 350 : 0));
+      }
+
+      history = [...newSets.reverse(), ...history].slice(0, 50);
+      lastResult = newSets[newSets.length - 1];
+      renderHistory();
+
+      if (sets > 1) {
+        resultLabel.textContent = `${sets}세트 추첨 완료 (최신: ${lastResult.join(", ")})`;
+      }
+
+      drawBtn.disabled = false;
+    }
+
+    drawBtn.addEventListener("click", runDraw);
+
+    copyBtn.addEventListener("click", async () => {
+      if (history.length === 0) {
+        alert("복사할 추첨 결과가 없습니다.");
+        return;
+      }
+      const text = history
+        .slice(0, parseInt(countSelect.value, 10))
+        .map((nums) => nums.join(", "))
+        .join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "복사됨!";
+        setTimeout(() => { copyBtn.textContent = "복사"; }, 1500);
+      } catch {
+        alert("복사에 실패했습니다.\n\n" + text);
+      }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      if (history.length === 0) return;
+      if (confirm("추첨 기록을 모두 삭제할까요?")) {
+        history = [];
+        lastResult = [];
+        mainBalls.innerHTML = "";
+        resultLabel.textContent = "아래 버튼을 눌러 번호를 추첨하세요";
+        renderHistory();
+      }
+    });
+  </script>
+</body>
+</html>
