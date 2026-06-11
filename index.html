@@ -279,6 +279,161 @@
       font-size: 0.75rem;
       color: var(--text-muted);
     }
+
+    input[type="date"] {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid #2d3a4f;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    input[type="date"]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .profile-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .profile-status {
+      font-size: 0.8rem;
+      color: var(--green);
+      margin-top: 0.75rem;
+    }
+
+    .profile-status.pending {
+      color: var(--text-muted);
+    }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .chat-panel.disabled {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 0.25rem;
+    }
+
+    .chat-message {
+      max-width: 92%;
+      padding: 0.75rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .chat-message.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-message.bot {
+      align-self: flex-start;
+      background: var(--bg);
+      border: 1px solid #2d3a4f;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-message .fortune-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+
+    .chat-message .chat-numbers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin: 0.65rem 0;
+    }
+
+    .chat-message .chat-numbers .ball {
+      width: 34px;
+      height: 34px;
+      font-size: 0.82rem;
+      animation: none;
+    }
+
+    .chat-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      padding: 1.25rem 0;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input-row input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid #2d3a4f;
+      border-radius: 10px;
+      padding: 0.7rem 0.85rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .chat-input-row input[type="text"]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .chat-actions .btn {
+      font-size: 0.875rem;
+      padding: 0.6rem 1rem;
+    }
+
+    .typing-indicator {
+      align-self: flex-start;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 0.35rem 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -287,6 +442,36 @@
       <h1>로또 번호 추첨기</h1>
       <p>1~45 중 중복 없이 6개 번호를 무작위로 추첨합니다</p>
     </header>
+
+    <section class="card">
+      <h2 class="section-title">생년월일 입력</h2>
+      <p class="section-desc">운세 챗봇이 번호를 추천하려면 생년월일이 필요합니다.</p>
+      <div class="profile-form">
+        <div class="control-group">
+          <label for="birthDate">생년월일</label>
+          <input type="date" id="birthDate">
+        </div>
+        <button class="btn btn-primary" id="saveBirthBtn" style="flex:0;min-width:auto;">저장</button>
+      </div>
+      <p class="profile-status pending" id="profileStatus">생년월일을 입력하고 저장해 주세요.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">운세 챗봇</h2>
+      <p class="section-desc">생년월일과 오늘의 운세를 바탕으로 번호를 추천하고 이유를 알려드립니다.</p>
+      <div class="chat-panel disabled" id="chatPanel">
+        <div class="chat-messages" id="chatMessages">
+          <p class="chat-empty">생년월일 저장 후 챗봇을 이용할 수 있습니다.</p>
+        </div>
+        <div class="chat-actions">
+          <button class="btn btn-primary" id="recommendBtn">운세 번호 추천</button>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="챗봇에게 메시지를 입력하세요..." maxlength="300" disabled>
+          <button class="btn btn-secondary" id="sendBtn" disabled>전송</button>
+        </div>
+      </div>
+    </section>
 
     <section class="card">
       <div class="controls">
@@ -476,6 +661,194 @@
         renderHistory();
       }
     });
+
+    const birthDateInput = document.getElementById("birthDate");
+    const saveBirthBtn = document.getElementById("saveBirthBtn");
+    const profileStatus = document.getElementById("profileStatus");
+    const chatPanel = document.getElementById("chatPanel");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const recommendBtn = document.getElementById("recommendBtn");
+
+    const BIRTH_STORAGE_KEY = "lottoBirthDate";
+    let savedBirthDate = localStorage.getItem(BIRTH_STORAGE_KEY) || "";
+    let chatHistory = [];
+    let isChatLoading = false;
+
+    function setChatEnabled(enabled) {
+      chatPanel.classList.toggle("disabled", !enabled);
+      chatInput.disabled = !enabled;
+      sendBtn.disabled = !enabled;
+      recommendBtn.disabled = !enabled;
+    }
+
+    function updateProfileUI() {
+      if (savedBirthDate) {
+        birthDateInput.value = savedBirthDate;
+        profileStatus.textContent = `저장됨: ${savedBirthDate}`;
+        profileStatus.classList.remove("pending");
+        setChatEnabled(true);
+        if (chatMessages.querySelector(".chat-empty")) {
+          chatMessages.innerHTML = '<p class="chat-empty">운세 번호 추천 버튼을 눌러 보세요.</p>';
+        }
+      } else {
+        profileStatus.textContent = "생년월일을 입력하고 저장해 주세요.";
+        profileStatus.classList.add("pending");
+        setChatEnabled(false);
+      }
+    }
+
+    saveBirthBtn.addEventListener("click", () => {
+      const value = birthDateInput.value;
+      if (!value) {
+        alert("생년월일을 선택해 주세요.");
+        return;
+      }
+      savedBirthDate = value;
+      localStorage.setItem(BIRTH_STORAGE_KEY, value);
+      updateProfileUI();
+      saveBirthBtn.textContent = "저장됨";
+      setTimeout(() => { saveBirthBtn.textContent = "저장"; }, 1200);
+    });
+
+    function clearChatEmptyState() {
+      const empty = chatMessages.querySelector(".chat-empty");
+      if (empty) empty.remove();
+    }
+
+    function appendChatMessage(role, html) {
+      clearChatEmptyState();
+      const el = document.createElement("div");
+      el.className = `chat-message ${role === "user" ? "user" : "bot"}`;
+      el.innerHTML = html;
+      chatMessages.appendChild(el);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendUserMessage(text) {
+      appendChatMessage("user", escapeHtml(text));
+    }
+
+    function appendBotMessage(data) {
+      const ballsHtml = data.numbers
+        .map((n) => `<div class="ball ${getBallColor(n)}">${n}</div>`)
+        .join("");
+
+      appendChatMessage("bot", `
+        <div class="fortune-tag">오늘의 운세</div>
+        ${escapeHtml(data.fortune)}
+        <div class="chat-numbers">${ballsHtml}</div>
+        <strong>추천 이유</strong><br>${escapeHtml(data.explanation)}
+        <br><br>${escapeHtml(data.reply)}
+      `);
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function showTyping(show) {
+      let typing = chatMessages.querySelector(".typing-indicator");
+      if (show) {
+        clearChatEmptyState();
+        if (!typing) {
+          typing = document.createElement("div");
+          typing.className = "typing-indicator";
+          typing.textContent = "운세를 분석하는 중...";
+          chatMessages.appendChild(typing);
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } else if (typing) {
+        typing.remove();
+      }
+    }
+
+    async function requestChat(message) {
+      if (!savedBirthDate) {
+        alert("먼저 생년월일을 저장해 주세요.");
+        return;
+      }
+      if (isChatLoading) return;
+
+      isChatLoading = true;
+      recommendBtn.disabled = true;
+      sendBtn.disabled = true;
+      chatInput.disabled = true;
+
+      if (message) {
+        appendUserMessage(message);
+        chatHistory.push({ role: "user", text: message });
+      }
+
+      showTyping(true);
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            birthDate: savedBirthDate,
+            message,
+            chatHistory,
+          }),
+        });
+
+        const data = await response.json();
+        showTyping(false);
+
+        if (!response.ok) {
+          throw new Error(data.error || "요청에 실패했습니다.");
+        }
+
+        appendBotMessage(data);
+        chatHistory.push({
+          role: "assistant",
+          text: `[번호: ${data.numbers.join(", ")}] ${data.reply}`,
+        });
+
+        renderBalls(mainBalls, data.numbers);
+        resultLabel.textContent = "챗봇 추천 번호";
+        history = [data.numbers, ...history].slice(0, 50);
+        renderHistory();
+      } catch (error) {
+        showTyping(false);
+        appendChatMessage("bot", escapeHtml(error.message));
+      } finally {
+        isChatLoading = false;
+        recommendBtn.disabled = false;
+        sendBtn.disabled = false;
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    recommendBtn.addEventListener("click", () => {
+      requestChat("");
+    });
+
+    sendBtn.addEventListener("click", () => {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.value = "";
+      requestChat(text);
+    });
+
+    chatInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendBtn.click();
+      }
+    });
+
+    updateProfileUI();
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    birthDateInput.max = todayStr;
   </script>
 </body>
 </html>
