@@ -70,6 +70,10 @@ function parseSupabaseError(status, errText) {
     // ignore JSON parse errors
   }
 
+  if (errText) {
+    return `Supabase 오류: ${errText.slice(0, 200)}`;
+  }
+
   return "가입 정보 저장에 실패했습니다. Supabase 설정을 확인한 뒤 다시 시도해 주세요.";
 }
 
@@ -143,6 +147,13 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     if (error.message === "DUPLICATE_EMAIL") {
       return res.status(409).json({ error: "이미 가입된 이메일입니다." });
+    }
+
+    if (error.message === "SUPABASE_NOT_CONFIGURED") {
+      return res.status(500).json({
+        error:
+          "Supabase 환경변수가 설정되지 않았습니다. SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY를 확인해 주세요.",
+      });
     }
 
     return res.status(500).json({
